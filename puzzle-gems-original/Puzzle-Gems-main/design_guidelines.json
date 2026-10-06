@@ -1,0 +1,129 @@
+{
+  "app_name": "Jewel Sort Puzzle",
+  "personality": "6 Glass / Luxe DARK",
+  "personality_one_liner": "A cinematic, jewel-encrusted sorting experience with translucent glass surfaces and gleaming gemstone crystals on deep obsidian depths.",
+  "color": {
+    "surface": "#0C0E14",
+    "onSurface": "#F4F5F7",
+    "surfaceSecondary": "#161922",
+    "onSurfaceSecondary": "#E2E4EB",
+    "surfaceTertiary": "#1F232F",
+    "onSurfaceTertiary": "#C5C8D4",
+    "surfaceInverse": "#FFFFFF",
+    "onSurfaceInverse": "#0C0E14",
+    "brand": "#D946EF",
+    "brandPrimary": "#E879F9",
+    "onBrandPrimary": "#0C0E14",
+    "brandSecondary": "#F43F5E",
+    "onBrandSecondary": "#FFFFFF",
+    "brandTertiary": "rgba(232, 121, 249, 0.15)",
+    "success": "#10B981",
+    "onSuccess": "#FFFFFF",
+    "warning": "#F59E0B",
+    "onWarning": "#0C0E14",
+    "error": "#EF4444",
+    "onError": "#FFFFFF",
+    "info": "#38BDF8",
+    "onInfo": "#0C0E14",
+    "border": "rgba(255, 255, 255, 0.08)",
+    "borderStrong": "rgba(232, 121, 249, 0.4)",
+    "divider": "rgba(255, 255, 255, 0.06)",
+    "muted": "#94A3B8",
+    "onBrand": "#0C0E14"
+  },
+  "typography": {
+    "displayFontFamily": "System",
+    "textFontFamily": "System",
+    "scale": {
+      "sm": 12,
+      "base": 14,
+      "lg": 16,
+      "xl": 20,
+      "2xl": 24
+    }
+  },
+  "spacing": {
+    "rule": "Maintain generous vertical breathing room with strict safe-area adherence and compact floating status bars.",
+    "xs": 4,
+    "sm": 8,
+    "md": 12,
+    "lg": 16,
+    "xl": 24,
+    "2xl": 32,
+    "3xl": 48
+  },
+  "radius_tokens": {
+    "sm": 6,
+    "md": 12,
+    "lg": 20,
+    "pill": 999
+  },
+  "shadow_tier": "2",
+  "navigation": "stack_only",
+  "icon_set": "Ionicons",
+  "glassmorphism": {
+    "enabled": "true",
+    "do's": [
+      "Use frosted glass panels for headers, tube containers, and level completion modals",
+      "Apply translucent jewel trays with subtle borders",
+      "Ensure text contrast meets WCAG AAA standards over glass surfaces"
+    ],
+    "dont's": [
+      "Avoid low-contrast text on transparent glass",
+      "Do not blur interactive buttons without solid tint backing"
+    ]
+  },
+  "platform_libraries": {
+    "glass": {
+      "ios": "expo-glass-effect",
+      "android": "expo-blur",
+      "low_end_android_fallback": "solid surfaceSecondary"
+    },
+    "image": "expo-image",
+    "blur": "expo-blur",
+    "bottom_sheet": "@gorhom/bottom-sheet",
+    "animation": "react-native-reanimated",
+    "gesture": "react-native-gesture-handler"
+  },
+  "screens": [
+    {
+      "name": "LevelSelect",
+      "purpose": "Display all 10 curated progressive sorting levels with completion badges and quick access.",
+      "states": {
+        "loading": "Centered translucent spinner over deep obsidian canvas.",
+        "empty": "No levels found card with retry button.",
+        "error": "Error message banner with retry action."
+      },
+      "layout": "Vertical scroll view featuring a cinematic header, level progression grid with glass cards, stars earned, move records, and direct touch launch."
+    },
+    {
+      "name": "GamePlay",
+      "purpose": "The core puzzle sorting board where players tap tubes to lift, move, and sort sparkling gemstone crystals.",
+      "states": {
+        "loading": "Initializing puzzle board with animated crystal generator.",
+        "empty": "Empty tube indicator.",
+        "error": "Invalid move notification with haptic feedback."
+      },
+      "layout": "Immersive dark canvas with top status header (level, move counter, undo, restart), central responsive tube grid with glass styling and glowing crystal stacks, and bottom sticky control dock."
+    },
+    {
+      "name": "LevelComplete",
+      "purpose": "Celebratory modal overlay displaying victory stars, moves taken, best record, and next level action.",
+      "states": {
+        "loading": "Particle and glow mount animation.",
+        "empty": "N/A",
+        "error": "N/A"
+      },
+      "layout": "Centered frosted glass sheet with glowing gem iconography, performance stats, and tactile primary CTA buttons for Next Level and Level Select."
+    }
+  ],
+  "images": {},
+  "instructions_to_main_agent": [
+    "Build Jewel Sort Puzzle as a fully functional, highly polished React Native mobile puzzle game using Expo, React Native Reanimated, and Gesture Handler.",
+    "Implement 10 manually curated, resolvable levels with progressive difficulty (ruby, emerald, sapphire, amethyst, topaz gemstones).",
+    "Ensure flawless tube tap interaction: tapping a tube selects the top jewel with a smooth lift animation, tapping another moves it if valid (empty or same color match), otherwise animates back with a soft spring.",
+    "Include local storage progress saving (AsyncStorage), undo functionality, move counter, and level restart.",
+    "Adhere strictly to the Glass / Luxe DARK personality palette with deep obsidian background (#0C0E14), frosted glass containers, glowing gemstone aesthetics, and zero banned colors.",
+    "Ensure touch targets are >= 44x44pt and safe area insets are fully respected across all screens."
+  ]
+}
