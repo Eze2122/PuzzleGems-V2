@@ -1,302 +1,129 @@
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
+import { memo, useEffect, useMemo } from "react";
 import { StyleSheet, View } from "react-native";
-import { useEffect } from "react";
+import Animated, {
+  cancelAnimation, Easing, useAnimatedStyle, useSharedValue, withRepeat, withSequence, withSpring, withTiming,
+} from "react-native-reanimated";
+import Svg, { Defs, Ellipse, LinearGradient as SvgGradient, Polygon, Stop } from "react-native-svg";
 
 import { GemColor } from "@/src/game/levels";
-import { makeStyles, useTheme } from "@/src/theme";
+import { colors } from "@/src/theme";
 
 type GemProps = { color: GemColor; selected?: boolean; size?: number };
 
-const GEM_ICON: Record<GemColor, keyof typeof Ionicons.glyphMap> = {
-  ruby: "diamond",
-  emerald: "diamond-outline",
-  sapphire: "sparkles",
-  amethyst: "star",
-  topaz: "flash",
-  aqua: "water",
-  coral: "flame",
+// ---- faceted "brilliant cut" geometry (top view), computed once ----
+const SIDES = 8;
+const pt = (r: number, i: number) => {
+  const a = ((i * 360) / SIDES - 90 + 180 / SIDES) * (Math.PI / 180);
+  return [50 + r * Math.cos(a), 50 + r * Math.sin(a)] as const;
 };
+type Facet = { points: string; light: number };
+const FACETS: Facet[] = (() => {
+  const out: Facet[] = [];
+  const LIGHT = (-135 * Math.PI) / 180; // light from top-left
+  const shade = (cx: number, cy: number, jitter: number) => {
+    const a = Math.atan2(cy - 50, cx - 50);
+    return Math.max(0, Math.min(1, 0.5 + 0.45 * Math.cos(a - LIGHT) + jitter));
+  };
+  for (let i = 0; i < SIDES; i++) {
+    const P0 = pt(47, i), P1 = pt(47, i + 1);
+    const T0 = pt(25, i), T1 = pt(25, i + 1);
+    const mid = pt(30, i + 0.5);
+    const tri = (a: readonly number[], b: readonly number[], c: readonly number[], j: number) => {
+      const cx = (a[0] + b[0] + c[0]) / 3, cy = (a[1] + b[1] + c[1]) / 3;
+      out.push({ points: `${a[0]},${a[1]} ${b[0]},${b[1]} ${c[0]},${c[1]}`, light: shade(cx, cy, j) });
+    };
+    tri(P0, P1, mid, 0.06);
+    tri(P0, mid, T0, -0.08);
+    tri(P1, T1, mid, 0.02);
+  }
+  return out;
+})();
+const OUTLINE = Array.from({ length: SIDES }, (_, i) => pt(47, i).join(",")).join(" ");
+const TABLE = Array.from({ length: SIDES }, (_, i) => pt(25, i).join(",")).join(" ");
 
-/**
- * 3D gem with multi-layer facets. Selection shows a subtle light reflection
- * sliding across the surface plus a slight brightness lift. No cross/star
- * burst effects.
- */
+const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+const mix = (a: string, b: string, t: number) => {
+  const A = hex(a), B = hex(b);
+  return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(",")})`;
+};
+const shadeColor = (base: string, highlight: string, shadow: string, l: number) =>
+  l > 0.5 ? mix(base, highlight, (l - 0.5) * 1.6) : mix(shadow, base, l * 2);
+
+const GemArt = memo(function GemArt({ color, size }: { color: GemColor; size: number }) {
+  const p = colors.gems[color];
+  const fills = useMemo(() => FACETS.map((f) => shadeColor(p.base, p.highlight, p.shadow, f.light)), [p]);
+  const id = `g-${color}`;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <SvgGradient id={id} x1="0.2" y1="0.1" x2="0.8" y2="0.95">
+          <Stop offset="0" stopColor={p.highlight} />
+          <Stop offset="0.55" stopColor={p.base} />
+          <Stop offset="1" stopColor={p.shadow} />
+        </SvgGradient>
+      </Defs>
+      <Polygon points={OUTLINE} fill={p.shadow} />
+      {FACETS.map((f, i) => (
+        <Polygon key={i} points={f.points} fill={fills[i]} stroke={p.highlight} strokeOpacity={0.35} strokeWidth={0.6} />
+      ))}
+      <Polygon points={TABLE} fill={`url(#${id})`} stroke={p.highlight} strokeOpacity={0.7} strokeWidth={0.8} />
+      <Polygon points={OUTLINE} fill="none" stroke={colors.surfaceInverse} strokeOpacity={0.55} strokeWidth={1.4} />
+      <Ellipse cx={38} cy={33} rx={10} ry={5} fill={colors.surfaceInverse} opacity={0.85} transform="rotate(-30 38 33)" />
+      <Ellipse cx={64} cy={66} rx={3} ry={3} fill={colors.surfaceInverse} opacity={0.6} />
+    </Svg>
+  );
+});
+
+/** Crystalline faceted gem. Lifts, floats and shimmers while selected. */
 export function Gem({ color, selected = false, size = 42 }: GemProps) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-  const palette = colors.gems[color];
-
   const lift = useSharedValue(0);
   const float = useSharedValue(0);
   const entrance = useSharedValue(0);
-  const shineX = useSharedValue(0); // -1 → 1 across the gem
-  const brightness = useSharedValue(0); // extra highlight when selected
+  const glow = useSharedValue(0);
 
-  // Entrance scale-in (no burst)
   useEffect(() => {
     entrance.value = withSpring(1, { damping: 12, stiffness: 190, mass: 0.6 });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [entrance]);
 
-  // Selection: lift + idle float + sliding shine + brightness lift
   useEffect(() => {
-    lift.value = withSpring(selected ? -10 : 0, { damping: 15, stiffness: 190 });
+    lift.value = withSpring(selected ? -size * 0.24 : 0, { damping: 14, stiffness: 190 });
     if (selected) {
       float.value = withRepeat(
         withSequence(
-          withTiming(-2, { duration: 1000, easing: Easing.inOut(Easing.quad) }),
-          withTiming(0, { duration: 1000, easing: Easing.inOut(Easing.quad) }),
-        ),
-        -1,
-        false,
+          withTiming(-3, { duration: 900, easing: Easing.inOut(Easing.quad) }),
+          withTiming(0, { duration: 900, easing: Easing.inOut(Easing.quad) }),
+        ), -1, false,
       );
-      brightness.value = withTiming(1, { duration: 280, easing: Easing.out(Easing.quad) });
-      // Reflection sweeps across the surface and softly returns
-      shineX.value = -1;
-      shineX.value = withRepeat(
-        withSequence(
-          withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.cubic) }),
-          withTiming(-1, { duration: 0 }),
-        ),
-        -1,
-        false,
-      );
+      glow.value = withRepeat(withSequence(withTiming(1, { duration: 700 }), withTiming(0.4, { duration: 700 })), -1, true);
     } else {
       cancelAnimation(float);
-      cancelAnimation(shineX);
-      float.value = withTiming(0, { duration: 180 });
-      brightness.value = withTiming(0, { duration: 240 });
-      shineX.value = withTiming(-1, { duration: 180 });
+      cancelAnimation(glow);
+      float.value = withTiming(0, { duration: 160 });
+      glow.value = withTiming(0, { duration: 200 });
     }
-  }, [lift, float, shineX, brightness, selected]);
+  }, [lift, float, glow, selected, size]);
 
   const wrapStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateY: lift.value + float.value },
-      { scale: 0.65 + 0.35 * entrance.value },
-    ],
+    transform: [{ translateY: lift.value + float.value }, { scale: 0.6 + 0.4 * entrance.value }],
     opacity: entrance.value,
   }));
-
-  const brightnessStyle = useAnimatedStyle(() => ({ opacity: brightness.value * 0.22 }));
-
-  const shineStyle = useAnimatedStyle(() => {
-    // Fade in near the center of the sweep, fade out at the edges
-    const t = shineX.value;
-    const fade = Math.max(0, 1 - Math.abs(t) * 1.1);
-    return {
-      opacity: fade * 0.55,
-      transform: [{ translateX: t * size * 0.5 }, { rotate: "-30deg" }],
-    };
-  });
-
-  const bodySize = size * 0.88;
-  const radius = bodySize * 0.5;
+  const glowStyle = useAnimatedStyle(() => ({ opacity: glow.value * 0.75 }));
 
   return (
-    <Animated.View style={[styles.gemWrap, { width: size, height: size }, wrapStyle]}>
-      {/* 3D gem body */}
-      <View
-        style={[
-          styles.body,
-          {
-            width: bodySize,
-            height: bodySize,
-            borderRadius: radius,
-            borderColor: palette.highlight,
-            shadowColor: palette.base,
-          },
-        ]}
-      >
-        {/* Base gradient */}
-        <LinearGradient
-          colors={[palette.highlight, palette.base, palette.shadow]}
-          start={{ x: 0.3, y: 0.05 }}
-          end={{ x: 0.72, y: 1 }}
-          style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-        />
-
-        {/* Top faceted highlight */}
-        <View
-          style={[
-            styles.topFacet,
-            {
-              width: bodySize * 0.74,
-              height: bodySize * 0.36,
-              borderRadius: bodySize,
-              backgroundColor: palette.highlight,
-            },
-          ]}
-        />
-
-        {/* Bottom shade for depth */}
-        <LinearGradient
-          colors={["transparent", "rgba(0,0,0,0.38)"]}
-          style={[StyleSheet.absoluteFill, { borderRadius: radius }]}
-          pointerEvents="none"
-        />
-
-        {/* Bottom crescent highlight (refractive bottom) */}
-        <View
-          style={[
-            styles.bottomCrescent,
-            {
-              width: bodySize * 0.68,
-              height: bodySize * 0.28,
-              borderRadius: bodySize,
-              borderBottomColor: palette.highlight,
-            },
-          ]}
-        />
-
-        {/* Rim light along top edge */}
-        <View
-          style={[
-            styles.rimLight,
-            {
-              width: bodySize * 0.82,
-              height: bodySize * 0.82,
-              borderRadius: bodySize,
-              borderTopColor: palette.highlight,
-            },
-          ]}
-        />
-
-        {/* Static specular glint */}
-        <View
-          style={[
-            styles.glint,
-            {
-              width: bodySize * 0.22,
-              height: bodySize * 0.11,
-              borderRadius: bodySize,
-              backgroundColor: colors.surfaceInverse,
-            },
-          ]}
-        />
-
-        {/* Static micro-glint */}
-        <View
-          style={[
-            styles.glintSmall,
-            {
-              width: bodySize * 0.09,
-              height: bodySize * 0.09,
-              borderRadius: bodySize,
-              backgroundColor: colors.surfaceInverse,
-            },
-          ]}
-        />
-
-        {/* Engraved icon (subtle) */}
-        <Ionicons
-          name={GEM_ICON[color]}
-          size={size * 0.3}
-          color={palette.icon}
-          style={styles.icon}
-        />
-
-        {/* Brightness lift overlay when selected */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            StyleSheet.absoluteFill,
-            { borderRadius: radius, backgroundColor: colors.surfaceInverse },
-            brightnessStyle,
-          ]}
-        />
-
-        {/* Sliding reflection highlight (clipped by body overflow:hidden) */}
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            styles.shine,
-            {
-              width: bodySize * 0.42,
-              height: bodySize * 1.4,
-              borderRadius: bodySize,
-            },
-            shineStyle,
-          ]}
-        >
-          <LinearGradient
-            colors={["transparent", "rgba(255,255,255,0.9)", "transparent"]}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
+    <Animated.View style={[styles.wrap, { width: size, height: size }, wrapStyle]}>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.glow, { width: size * 1.1, height: size * 1.1, borderRadius: size, backgroundColor: colors.gems[color].highlight }, glowStyle]}
+      />
+      <View style={[styles.shadow, { shadowColor: colors.gems[color].shadow }]}>
+        <GemArt color={color} size={size} />
       </View>
     </Animated.View>
   );
 }
 
-const useStyles = makeStyles((colors) => StyleSheet.create({
-  gemWrap: { alignItems: "center", justifyContent: "center" },
-  body: {
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: StyleSheet.hairlineWidth,
-    overflow: "hidden",
-    shadowOpacity: 0.6,
-    shadowRadius: 11,
-    shadowOffset: { width: 0, height: 5 },
-    elevation: 7,
-  },
-  topFacet: {
-    position: "absolute",
-    top: "6%",
-    opacity: 0.82,
-  },
-  bottomCrescent: {
-    position: "absolute",
-    bottom: "8%",
-    borderBottomWidth: 1.6,
-    opacity: 0.55,
-    backgroundColor: "transparent",
-  },
-  rimLight: {
-    position: "absolute",
-    top: "2%",
-    borderWidth: 1,
-    borderColor: "transparent",
-    borderTopWidth: 1.2,
-    opacity: 0.5,
-  },
-  glint: {
-    position: "absolute",
-    top: "16%",
-    left: "22%",
-    opacity: 0.92,
-    transform: [{ rotate: "-28deg" }],
-  },
-  glintSmall: {
-    position: "absolute",
-    bottom: "22%",
-    right: "22%",
-    opacity: 0.6,
-  },
-  icon: {
-    opacity: 0.35,
-    textShadowColor: colors.surfaceInverse,
-    textShadowRadius: 2,
-    textShadowOffset: { width: 0, height: 1 },
-  },
-  shine: {
-    position: "absolute",
-    top: "-20%",
-    overflow: "hidden",
-  },
-}));
+const styles = StyleSheet.create({
+  wrap: { alignItems: "center", justifyContent: "center" },
+  glow: { position: "absolute" },
+  shadow: { shadowOpacity: 0.45, shadowRadius: 5, shadowOffset: { width: 0, height: 3 }, elevation: 0 },
+});

@@ -1,26 +1,59 @@
-export type GemColor = "ruby" | "emerald" | "sapphire" | "amethyst" | "topaz" | "aqua" | "coral";
+import data from "./levels.data.json";
+import { canMoveGem, isPuzzleComplete, moveGem, TUBE_CAPACITY, Tubes } from "./logic";
+
+export type GemColor =
+  | "ruby" | "emerald" | "sapphire" | "amethyst" | "topaz" | "aqua" | "coral" | "rose" | "lime" | "moon";
+
+export type Difficulty = "easy" | "medium" | "hard" | "advanced" | "expert";
 
 export type GameLevel = {
   id: number;
-  title: string;
-  difficulty: string;
+  difficulty: Difficulty;
   par: number;
   tubes: GemColor[][];
+  /** Verified solution (from, to) moves produced by scripts/generate-levels.mjs */
+  solution: [number, number][];
 };
 
-// Curated, deterministic boards. Each color appears exactly four times and
-// every board has two empty tubes for the player to work with.
-export const LEVELS: GameLevel[] = [
-  { id: 1, title: "Primer destello", difficulty: "Suave", par: 12, tubes: [["emerald", "emerald", "sapphire", "emerald"], ["ruby", "emerald", "ruby", "sapphire"], ["sapphire", "ruby", "sapphire", "ruby"], [], []] },
-  { id: 2, title: "Brillo cruzado", difficulty: "Suave", par: 15, tubes: [["sapphire", "emerald", "sapphire", "sapphire"], ["ruby", "emerald", "ruby", "sapphire"], ["emerald", "ruby", "ruby", "emerald"], [], []] },
-  { id: 3, title: "Veta lunar", difficulty: "Media", par: 20, tubes: [["ruby", "emerald", "ruby", "topaz"], ["emerald", "sapphire", "sapphire", "emerald"], ["topaz", "sapphire", "sapphire", "emerald"], ["ruby", "ruby", "topaz", "topaz"], [], []] },
-  { id: 4, title: "Prisma oculto", difficulty: "Media", par: 23, tubes: [["ruby", "sapphire", "sapphire", "amethyst"], ["amethyst", "ruby", "sapphire", "sapphire"], ["ruby", "emerald", "ruby", "amethyst"], ["emerald", "amethyst", "emerald", "emerald"], [], []] },
-  { id: 5, title: "Cámara solar", difficulty: "Media", par: 29, tubes: [["amethyst", "emerald", "ruby", "amethyst"], ["emerald", "sapphire", "ruby", "topaz"], ["ruby", "sapphire", "sapphire", "topaz"], ["emerald", "emerald", "topaz", "ruby"], ["amethyst", "topaz", "amethyst", "sapphire"], [], []] },
-  { id: 6, title: "Constelación", difficulty: "Difícil", par: 34, tubes: [["ruby", "sapphire", "emerald", "topaz"], ["emerald", "emerald", "ruby", "sapphire"], ["amethyst", "ruby", "amethyst", "amethyst"], ["sapphire", "ruby", "topaz", "topaz"], ["sapphire", "emerald", "topaz", "amethyst"], [], []] },
-  { id: 7, title: "Nexo violeta", difficulty: "Difícil", par: 42, tubes: [["emerald", "topaz", "aqua", "aqua"], ["sapphire", "ruby", "ruby", "emerald"], ["sapphire", "ruby", "emerald", "topaz"], ["ruby", "aqua", "amethyst", "amethyst"], ["aqua", "topaz", "sapphire", "amethyst"], ["sapphire", "emerald", "amethyst", "topaz"], [], []] },
-  { id: 8, title: "Aurora mineral", difficulty: "Difícil", par: 46, tubes: [["topaz", "emerald", "amethyst", "ruby"], ["sapphire", "amethyst", "sapphire", "emerald"], ["aqua", "ruby", "topaz", "aqua"], ["aqua", "ruby", "emerald", "emerald"], ["sapphire", "sapphire", "aqua", "ruby"], ["amethyst", "topaz", "topaz", "amethyst"], [], []] },
-  { id: 9, title: "Bóveda cristalina", difficulty: "Experta", par: 58, tubes: [["amethyst", "emerald", "topaz", "emerald"], ["amethyst", "emerald", "topaz", "ruby"], ["sapphire", "sapphire", "coral", "amethyst"], ["sapphire", "sapphire", "aqua", "emerald"], ["ruby", "coral", "coral", "ruby"], ["ruby", "topaz", "aqua", "aqua"], ["aqua", "topaz", "amethyst", "coral"], [], []] },
-  { id: 10, title: "Gran orbe", difficulty: "Experta", par: 66, tubes: [["aqua", "sapphire", "topaz", "topaz"], ["amethyst", "ruby", "emerald", "amethyst"], ["emerald", "aqua", "sapphire", "ruby"], ["sapphire", "coral", "coral", "ruby"], ["amethyst", "sapphire", "topaz", "aqua"], ["emerald", "coral", "amethyst", "coral"], ["ruby", "topaz", "emerald", "aqua"], [], []] },
-];
+// Levels 1-10 are the original hand-made boards (tubes + par unchanged).
+// Levels 11-100 are generated offline with a seeded generator and solver.
+// Regenerate with: node scripts/generate-levels.mjs
+
+/** Structural checks + replay of the stored solution using the game's own rules (logic.ts). */
+export function validateLevel(level: GameLevel): boolean {
+  const counts: Record<string, number> = {};
+  for (const tube of level.tubes) {
+    if (tube.length > TUBE_CAPACITY) return false;
+    for (const gem of tube) counts[gem] = (counts[gem] ?? 0) + 1;
+  }
+  if (!Object.values(counts).every((n) => n === TUBE_CAPACITY)) return false;
+  if (!level.tubes.some((tube) => tube.length === 0)) return false;
+  let tubes: Tubes = level.tubes.map((tube) => [...tube]);
+  for (const [from, to] of level.solution) {
+    if (!canMoveGem(tubes, from, to)) return false;
+    tubes = moveGem(tubes, from, to);
+  }
+  return isPuzzleComplete(tubes);
+}
+
+export const LEVELS: GameLevel[] = (data as unknown as GameLevel[]).filter((level) => {
+  const ok = validateLevel(level);
+  if (!ok) console.error(`[levels] level ${level.id} failed validation and was skipped`);
+  return ok;
+});
+
+export const TOTAL_LEVELS = LEVELS.length;
 
 export const getLevel = (levelId: number) => LEVELS.find((level) => level.id === levelId) ?? LEVELS[0];
+
+export const colorCount = (level: GameLevel) => new Set(level.tubes.flat()).size;
+
+/** 3 stars at or under par, 2 stars up to +50%, otherwise 1. */
+export const starsFor = (moves: number, par: number) => (moves <= par ? 3 : moves <= Math.ceil(par * 1.5) ? 2 : 1);
+
+/** World / music group: 0 = 1-20, 1 = 21-40, ... 4 = 81-100 */
+export const worldFor = (levelId: number) => Math.min(4, Math.floor((levelId - 1) / 20));
+
+/** True when the player has at least one legal move left. */
+export const hasAnyMove = (tubes: Tubes) =>
+  tubes.some((_, from) => tubes.some((__, to) => canMoveGem(tubes, from, to)));

@@ -6,15 +6,18 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "jewel-sort-puzzle",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.emergent.puzzlegems.ozxnol"
+      "bundleIdentifier": "com.emergent.puzzlegems.ozxnol",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "Used to show you more relevant ads."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#0C0E14"
+        "backgroundColor": "#9B5CF6"
       },
       "package": "com.emergent.puzzlegems.ozxnol"
     },
@@ -29,9 +32,9 @@
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-image.png",
-          "imageWidth": 260,
+          "imageWidth": 280,
           "resizeMode": "contain",
-          "backgroundColor": "#0C0E14"
+          "backgroundColor": "#8A7CF3"
         }
       ],
       "expo-font",
@@ -39,7 +42,16 @@
       "expo-secure-store",
       "expo-web-browser",
       "expo-status-bar",
-      "expo-audio"
+      "expo-audio",
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-3940256099942544~3347511713",
+          "iosAppId": "ca-app-pub-3940256099942544~1458009866",
+          "userTrackingUsageDescription": "Used to show you more relevant ads."
+        }
+      ],
+      "@react-native-vector-icons/ionicons"
     ],
     "experiments": {
       "typedRoutes": true

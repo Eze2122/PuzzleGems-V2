@@ -1,25 +1,15 @@
-import { storage } from "@/src/utils/storage";
+import { loadSave, updateSave } from "@/src/storage/save";
 
-const KEY = "pg_audio_settings_v1";
-
+// Audio preferences now live in the unified save (legacy "pg_audio_settings_v1" is migrated).
 export type AudioSettings = { music: boolean; sfx: boolean };
 
 export const defaultAudioSettings: AudioSettings = { music: true, sfx: true };
 
 export async function loadAudioSettings(): Promise<AudioSettings> {
-  const stored = await storage.getItem<string>(KEY, "");
-  if (!stored) return defaultAudioSettings;
-  try {
-    const parsed = JSON.parse(stored) as Partial<AudioSettings>;
-    return {
-      music: typeof parsed.music === "boolean" ? parsed.music : true,
-      sfx: typeof parsed.sfx === "boolean" ? parsed.sfx : true,
-    };
-  } catch {
-    return defaultAudioSettings;
-  }
+  const { music, sfx } = await loadSave();
+  return { music, sfx };
 }
 
 export async function saveAudioSettings(settings: AudioSettings): Promise<void> {
-  await storage.setItem(KEY, JSON.stringify(settings));
+  updateSave({ music: settings.music, sfx: settings.sfx });
 }

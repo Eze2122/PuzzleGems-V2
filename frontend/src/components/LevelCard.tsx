@@ -1,151 +1,71 @@
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@react-native-vector-icons/ionicons";
+import { memo } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { GameLevel } from "@/src/game/levels";
-import { makeStyles, useTheme } from "@/src/theme";
+import { colors, fonts } from "@/src/theme";
 
-type LevelCardProps = { level: GameLevel; completed: boolean; locked: boolean; best?: number; onPress: () => void };
+type LevelCardProps = {
+  id: number;
+  stars: number;
+  locked: boolean;
+  current: boolean;
+  size: number;
+  label: string;
+  onPress: () => void;
+};
 
-export function LevelCard({ level, completed, locked, best, onPress }: LevelCardProps) {
-  const { colors } = useTheme();
-  const styles = useStyles();
-
-  const statusIcon = locked
-    ? ("lock-closed" as const)
-    : completed
-      ? ("checkmark-circle" as const)
-      : ("play-circle" as const);
-  const statusColor = locked ? colors.muted : completed ? colors.success : colors.brandPrimary;
-
+/** 3D candy tile with number and stars (matches the UI reference). */
+export const LevelCard = memo(function LevelCard({ id, stars, locked, current, size, label, onPress }: LevelCardProps) {
+  const tile = colors.tiles[(id - 1) % colors.tiles.length];
+  const face = locked ? colors.locked : tile.base;
+  const deep = locked ? colors.lockedDeep : tile.deep;
   return (
     <Pressable
-      testID={`level-${level.id}`}
+      testID={`level-${id}`}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: locked }}
       disabled={locked}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.card,
-        completed && styles.complete,
-        pressed && styles.pressed,
-        locked && styles.locked,
-      ]}
+      style={({ pressed }) => [{ width: size, height: size + 6 }, pressed && styles.pressed]}
     >
-      {/* Inner gradient background for depth */}
-      <LinearGradient
-        colors={
-          completed
-            ? ["rgba(16, 185, 129, 0.18)", "rgba(16, 185, 129, 0.04)"]
-            : ["rgba(255, 255, 255, 0.045)", "rgba(255, 255, 255, 0.0)"]
-        }
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={StyleSheet.absoluteFill}
-      />
-      {/* Top accent sheen */}
-      <View style={styles.sheen} />
-
-      <View style={styles.cardTop}>
-        <View style={[styles.number, completed && styles.numberComplete]}>
-          <LinearGradient
-            colors={
-              completed
-                ? [colors.success, "#064E3B"]
-                : [colors.surfaceTertiary, colors.surfaceSecondary]
-            }
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={StyleSheet.absoluteFill}
-          />
-          <Text style={styles.numberText}>{level.id}</Text>
-        </View>
-        <View style={styles.statusWrap}>
-          <Ionicons name={statusIcon} size={locked ? 17 : 22} color={statusColor} />
-        </View>
-      </View>
-
-      <Text style={styles.title} numberOfLines={1}>{level.title}</Text>
-      <Text style={styles.difficulty}>{level.difficulty}</Text>
-
-      <View style={styles.footer}>
-        <View style={styles.parPill}>
-          <Ionicons name="flag-outline" size={10} color={colors.brandPrimary} />
-          <Text style={styles.par}>PAR {level.par}</Text>
-        </View>
-        {best
-          ? <Text style={styles.best}>{best} mov.</Text>
-          : <Text style={styles.best}>{level.tubes.length - 2} colores</Text>}
+      <View style={[styles.deep, { backgroundColor: deep, borderRadius: size * 0.24 }]} />
+      <View style={[styles.face, { height: size, backgroundColor: face, borderRadius: size * 0.24 }, current && styles.current]}>
+        {!locked && <View style={[styles.gloss, { backgroundColor: tile.top, borderRadius: size * 0.2 }]} />}
+        {locked ? (
+          <>
+            <Text style={[styles.lockedNum, { fontSize: size * 0.2 }]}>{id}</Text>
+            <Ionicons name="lock-closed" size={size * 0.3} color={colors.textOnColor} />
+          </>
+        ) : (
+          <>
+            <Text style={[styles.num, { fontSize: size * 0.38 }]}>{id}</Text>
+            <View style={styles.stars}>
+              {[1, 2, 3].map((s) => (
+                <Ionicons key={s} name="star" size={size * 0.17} color={s <= stars ? colors.gold : "rgba(255,255,255,0.45)"} style={styles.star} />
+              ))}
+            </View>
+          </>
+        )}
       </View>
     </Pressable>
   );
-}
+});
 
-const useStyles = makeStyles((colors) => StyleSheet.create({
-  card: {
-    width: "48%",
-    minHeight: 148,
-    marginBottom: 12,
-    padding: 14,
-    borderRadius: 22,
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.surfaceSecondary,
-    overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
-    elevation: 4,
+const styles = StyleSheet.create({
+  pressed: { transform: [{ translateY: 3 }] },
+  deep: { position: "absolute", left: 0, right: 0, top: 6, bottom: 0 },
+  face: {
+    alignItems: "center", justifyContent: "center", overflow: "hidden",
+    borderWidth: 2, borderColor: "rgba(255,255,255,0.75)",
   },
-  complete: { borderColor: colors.success },
-  locked: { opacity: 0.48 },
-  pressed: { opacity: 0.82, transform: [{ scale: 0.98 }] },
-
-  sheen: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: colors.borderStrong,
-    opacity: 0.5,
+  current: { borderColor: colors.gold, borderWidth: 3 },
+  gloss: { position: "absolute", top: 3, left: 4, right: 4, height: "46%", opacity: 0.85 },
+  num: {
+    color: colors.textOnColor, fontFamily: fonts.display, marginTop: -4,
+    textShadowColor: colors.textShadow, textShadowRadius: 3, textShadowOffset: { width: 0, height: 2 },
   },
-
-  cardTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 14 },
-  number: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    overflow: "hidden",
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  numberComplete: { borderColor: colors.success },
-  numberText: { color: colors.onSurface, fontSize: 14, fontWeight: "800" },
-  statusWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  title: { color: colors.onSurface, fontSize: 15, fontWeight: "800", marginBottom: 4, letterSpacing: -0.2 },
-  difficulty: { color: colors.muted, fontSize: 12 },
-
-  footer: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 15 },
-  parPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 999,
-    backgroundColor: colors.brandTertiary,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: colors.borderStrong,
-  },
-  par: { color: colors.brandPrimary, fontSize: 10, fontWeight: "800", letterSpacing: 0.6 },
-  best: { color: colors.muted, fontSize: 11, fontWeight: "600" },
-}));
+  lockedNum: { color: colors.textOnColor, fontFamily: fonts.display, opacity: 0.9 },
+  stars: { flexDirection: "row", marginTop: -2 },
+  star: { textShadowColor: colors.textShadow, textShadowRadius: 2, textShadowOffset: { width: 0, height: 1 } },
+});

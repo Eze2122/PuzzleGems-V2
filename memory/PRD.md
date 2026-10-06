@@ -1,33 +1,24 @@
-# PRD — Puzzle Gems (evolución del proyecto existente)
+# PRD — Puzzle Gems (evolución del proyecto original "Jewel Sort")
 
 ## Problema original
-Importar, descomprimir y analizar el proyecto existente "Puzzle Gems" (Expo + React Native, juego de ordenar gemas en tubos) SIN reconstruirlo. Conservar mecánica, niveles, undo, reinicio, persistencia, mejores movimientos, audio, config Expo/Android y Package ID. Próximos pasos del usuario: rediseño visual, 100 niveles, vidas, idiomas, música y AdMob.
+Evolucionar el juego Expo existente (ordenar gemas en tubos) a "Puzzle Gems" sin reconstruirlo: conservar logic.ts, niveles originales, undo/restart, progreso, audio, Package ID `com.emergent.puzzlegems.ozxnol`. Original intacto en `/app/puzzle-gems-original/`.
 
-## Paso 1 — Importación y análisis (2026-06)
-- ZIP original intacto en `/app/puzzle-gems-original/Puzzle-Gems-main`.
-- Copiado tal cual a `/app/frontend` (app/, src/, assets/, constants/, app.json original con package `com.emergent.puzzlegems.ozxnol`). Instalados `expo-audio` y `@expo/vector-icons` (ya los usaba).
-- TypeScript: 0 errores. Preview web: compila y abre. Testing: 9/9 flujos OK (movimientos, inválidos, undo, victoria, desbloqueo, persistencia, toggles de audio).
+## Arquitectura (Expo SDK 57, expo-router)
+- Pantallas: `app/index.tsx` (splash animado con el póster aprobado), `home.tsx`, `levels.tsx`, `game.tsx` (+VictoryModal), `settings.tsx`.
+- Lógica: `src/game/logic.ts` (sin cambios), `levels.ts` (100 niveles + validación replay con logic.ts), `levels.data.json`, `solver.ts`, `lives.ts`.
+- Estado/persistencia: `src/state/GameProvider.tsx`, `src/storage/save.ts` (clave única `pg_save_v2`, migra `jewel-sort-puzzle-progress-v1` y `pg_audio_settings_v1`), `progress.ts`, `audio/settings.ts`.
+- i18n: `src/i18n/index.tsx` (ES/EN).
+- Audio: `AudioProvider.tsx` con 5 pistas mp3 (A–E por cada 20 niveles), move/win originales.
+- Ads: `src/ads/config.ts` (IDs de prueba), `index.ts` (nativo, UMP + interstitial + rewarded), `index.web.ts` (no-op), `AdBanner(.web).tsx`.
+- Scripts: `scripts/generate-levels.mjs`, `scripts/make-music.py`.
 
-## Arquitectura existente
-- `app/index.tsx`: pantalla única con estado `levels | game` (sin rutas separadas), modal de victoria.
-- `src/game/logic.ts`: TUBE_CAPACITY=4, canMoveGem, moveGem, isPuzzleComplete (reutilizable 100%).
-- `src/game/levels.ts`: 10 niveles manuales, 7 colores, 2 tubos vacíos, `par`.
-- `src/storage/progress.ts`: AsyncStorage directo, clave `jewel-sort-puzzle-progress-v1` {completed, bestMoves}.
-- `src/audio/AudioProvider.tsx` + `settings.ts`: expo-audio, music/move/win.wav, clave `pg_audio_settings_v1`.
-- Componentes: Gem, Tube, LevelCard, AmbientBackground, Sparkles. Backend no usado.
+## Implementado — 2026-06
+- Rediseño 3D pastel según referencias; icono = REFERENCIA_ICONO; splash = SPLASH_REFERENCIA.
+- 100 niveles verificados (1-10 originales), dificultad progresiva 3→9 colores.
+- Vidas (5, -1 al quedarse sin movimientos, +1 cada 30 min, persistentes), partida pendiente Continuar/Reiniciar, victoria con estrellas/récord, idiomas, música rotativa, AdMob estructurado, fixes base (botón nivel final, /10, Alert, iconos migrados a @react-native-vector-icons, lint).
+- Testing: iteration_2 13/13 flujos OK (web).
 
-## Problemas detectados (pendientes)
-- Botón de victoria en nivel final no hace nada (`goToLevels` sin invocar, index.tsx:385).
-- "/10" y textos hardcodeados en español (bloquea i18n).
-- Nombre visible "Jewel Sort" vs "Puzzle Gems"; slug/scheme `jewel-sort-puzzle`.
-- `Alert.alert` para reiniciar (no funciona en web; reemplazar por bottom sheet).
-- `@expo/vector-icons` deprecado → migrar a `@react-native-vector-icons`.
-- Lint (React Compiler): mutación de players en AudioProvider; redeclaración en Sparkles.
-- Mezcla de AsyncStorage directo y `@/src/utils/storage`.
-- AdMob requiere build nativo (no funciona en Expo Go).
-- music.wav 1 MB (convertir a m4a/mp3 al añadir más pistas).
-
-## Backlog
-- P0: rediseño visual, 100 niveles (generador/validador resoluble), vidas, i18n, AdMob.
-- P1: división en rutas (home/levels/game/settings), fix bugs anteriores.
-- P2: tienda, logros, tutorial.
+## Pendiente / Backlog
+- P0 antes del APK: IDs reales AdMob (config.ts + app.json), política de privacidad, probar ads/UMP en build nativa.
+- P1: tutorial nivel 1, pistas con anuncio recompensado, más pulido de animaciones de movimiento.
+- P2: logros, temas desbloqueables, tienda.

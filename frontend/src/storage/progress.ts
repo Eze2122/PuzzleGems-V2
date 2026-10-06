@@ -1,42 +1,39 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getLevel, starsFor, TOTAL_LEVELS } from "@/src/game/levels";
+import { loadSave, updateSave } from "@/src/storage/save";
 
-const STORAGE_KEY = "jewel-sort-puzzle-progress-v1";
-
+// Progress API kept from the original app; now backed by the unified save (save.ts).
 export type Progress = {
   completed: number[];
   bestMoves: Record<string, number>;
+  stars: Record<string, number>;
 };
 
-export const emptyProgress: Progress = { completed: [], bestMoves: {} };
+export const emptyProgress: Progress = { completed: [], bestMoves: {}, stars: {} };
 
 export async function loadProgress(): Promise<Progress> {
-  try {
-    const stored = await AsyncStorage.getItem(STORAGE_KEY);
-    if (!stored) return emptyProgress;
-    const parsed = JSON.parse(stored) as Partial<Progress>;
+  const { completed, bestMoves, stars } = await loadSave();
+  return { completed, bestMoves, stars };
+}
+
+export type CompletionResult = { progress: Progress; stars: number; best: number; isNewBest: boolean };
+
+export function recordCompletion(levelId: number, moves: number): CompletionResult {
+  const stars = starsFor(moves, getLevel(levelId).par);
+  let result: CompletionResult | null = null;
+  updateSave((save) => {
+    const key = String(levelId);
+    const completed = save.completed.includes(levelId)
+      ? save.completed
+      : [...save.completed, levelId].sort((a, b) => a - b);
+    const currentBest = save.bestMoves[key];
+    const isNewBest = !currentBest || moves < currentBest;
+    const bestMoves = isNewBest ? { ...save.bestMoves, [key]: moves } : save.bestMoves;
+    const starMap = { ...save.stars, [key]: Math.max(save.stars[key] ?? 0, stars) };
+    result = { progress: { completed, bestMoves, stars: starMap }, stars, best: bestMoves[key], isNewBest };
     return {
-      completed: Array.isArray(parsed.completed) ? parsed.completed : [],
-      bestMoves: parsed.bestMoves ?? {},
+      completed, bestMoves, stars: starMap, pending: null,
+      currentLevel: Math.min(TOTAL_LEVELS, Math.max(save.currentLevel, levelId + 1)),
     };
-  } catch {
-    return emptyProgress;
-  }
-}
-
-export async function saveProgress(progress: Progress) {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
-}
-
-export async function recordCompletion(levelId: number, moves: number) {
-  const progress = await loadProgress();
-  const completed = progress.completed.includes(levelId)
-    ? progress.completed
-    : [...progress.completed, levelId].sort((a, b) => a - b);
-  const currentBest = progress.bestMoves[String(levelId)];
-  const bestMoves = currentBest && currentBest <= moves
-    ? progress.bestMoves
-    : { ...progress.bestMoves, [String(levelId)]: moves };
-  const next = { completed, bestMoves };
-  await saveProgress(next);
-  return next;
+  });
+  return result as unknown as CompletionResult;
 }
