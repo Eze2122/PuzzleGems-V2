@@ -7,6 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "jewel-sort-puzzle",
     "userInterfaceStyle": "light",
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.emergent.puzzlegems.ozxnol",
@@ -14,6 +15,7 @@
         "NSUserTrackingUsageDescription": "Used to show you more relevant ads."
       }
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -21,11 +23,13 @@
       },
       "package": "com.emergent.puzzlegems.ozxnol"
     },
+
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       [
@@ -53,13 +57,23 @@
       ],
       "@react-native-vector-icons/ionicons"
     ],
+
     "experiments": {
-  "typedRoutes": true
-},
-"extra": {
-  "eas": {
-    "projectId": "1afac79e-7468-4ce2-be1d-67f19f122fc3"
+      "typedRoutes": true
+    },
+
+    "extra": {
+      "eas": {
+        "projectId": "1afac79e-7468-4ce2-be1d-67f19f122fc3"
+      }
+    }
+  },
+
+  "react-native-google-mobile-ads": {
+    "android_app_id": "ca-app-pub-3940256099942544~3347511713",
+    "ios_app_id": "ca-app-pub-3940256099942544~1458009866",
+    "delay_app_measurement_init": false,
+    "optimize_initialization": true,
+    "optimize_ad_loading": true
   }
-}
-}
 }
