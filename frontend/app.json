@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Puzzle Gems",
-    "slug": "jewel-sort-puzzle",
+    "slug": "puzzle-gems-v2",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
