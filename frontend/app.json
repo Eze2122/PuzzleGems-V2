@@ -54,7 +54,10 @@
       "@react-native-vector-icons/ionicons"
     ],
     "experiments": {
-      "typedRoutes": true
-    }
+  "typedRoutes": true
+},
+"extra": {
+  "eas": {
+    "projectId": "1afac79e-7468-4ce2-be1d-67f19f122fc3"
   }
 }
