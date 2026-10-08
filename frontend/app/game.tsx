@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { LayoutAnimation, Platform, StyleSheet, Text, UIManager, View } from "react-native";
+import { BannerAd, BannerAdSize } from "react-native-google-mobile-ads";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { maybeShowInterstitial, registerLevelCompleted } from "@/src/ads";
@@ -222,9 +223,16 @@ export default function GameScreen() {
           )}
         </View>
 
-        <View style={styles.dock}>
+                <View style={styles.dock}>
           <GameButton testID="undo-button" label={t("game.undo")} icon="arrow-undo" variant="purple" onPress={undo} disabled={!history.length || complete || failed} badge={history.length} style={styles.dockBtn} />
           <GameButton testID="restart-button" label={t("game.restart")} icon="refresh" variant="purple" onPress={() => setConfirmRestart(true)} disabled={complete} style={styles.dockBtn} />
+        </View>
+
+        <View style={styles.bannerContainer}>
+          <BannerAd
+            unitId="ca-app-pub-7902708143841298/6646006186"
+            size={BannerAdSize.BANNER}
+          />
         </View>
       </View>
 
@@ -283,7 +291,14 @@ const styles = StyleSheet.create({
   rows: { flex: 1, justifyContent: "space-evenly" },
   row: { flexDirection: "row", justifyContent: "center", alignItems: "flex-end" },
   dock: { flexDirection: "row", gap: 12, marginTop: 12 },
-  dockBtn: { flex: 1 },
+dockBtn: { flex: 1 },
+bannerContainer: {
+  alignItems: "center",
+  justifyContent: "center",
+  marginTop: 8,
+  minHeight: 50,
+},
+
   sheetTitle: { fontSize: 28, textAlign: "center" },
   sheetBody: { marginTop: 8, marginBottom: 12, fontSize: 15, textAlign: "center" },
   sheetBtn: { alignSelf: "stretch", marginTop: 10 },
