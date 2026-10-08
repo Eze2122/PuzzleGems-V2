@@ -6,9 +6,10 @@ import { Platform } from "react-native";
  * Android:
  * - Real App ID
  * - Real Banner Ad Unit
+ * - Real Interstitial Ad Unit
  *
- * Interstitial and Rewarded remain Google's official TEST IDs
- * until their real AdMob units are created.
+ * Rewarded remains Google's official TEST ID
+ * until its real AdMob unit is created.
  */
 
 // Real AdMob App IDs
@@ -20,8 +21,10 @@ const AD_UNITS_CONFIG = {
     // Real Puzzle Gems banner
     banner: "ca-app-pub-7902708143841298/6646006186",
 
-    // Google official test IDs
-    interstitial: "ca-app-pub-3940256099942544/1033173712",
+    // Real Puzzle Gems interstitial
+    interstitial: "ca-app-pub-7902708143841298/6620763485",
+
+    // Google official test ID
     rewarded: "ca-app-pub-3940256099942544/5224354917",
   },
 
